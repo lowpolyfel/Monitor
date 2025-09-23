@@ -1,0 +1,15 @@
+# Ignorar videos y salidas
+data/raw_videos/*
+outputs/*
+*.mp4
+*.mov
+*.avi
+
+# Archivos temporales
+__pycache__/
+*.pyc
+.DS_Store
+
+#ingnorar backups comprimidos
+*.tar.gz
+*.tgz

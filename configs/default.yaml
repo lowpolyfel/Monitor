@@ -1,0 +1,9 @@
+# TODO: Configuración centralizada para parámetros (umbrales, paths, etc.)
+# Ej.:
+# motion:
+#   diff_thr: 18
+#   min_area_pct: 0.002
+#   up_threshold: 0.015
+#   down_threshold: 0.010
+#   smooth_k: 8
+#   idle_stop_sec: 20
