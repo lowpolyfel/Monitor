@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "monitor"
+version = "0.1.0"
+description = "Herramienta de monitoreo de actividad basada en OpenCV"
+readme = "README.md"
+authors = [{name = "Monitor Maintainers"}]
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.23",
+  "opencv-python>=4.8",
+]
+
+[project.scripts]
+monitor-cli = "src.cli:main"
+monitor-gui = "src.gui:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["src", "src.io", "src.pipeline", "src.utils"]

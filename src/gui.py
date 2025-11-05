@@ -2,21 +2,22 @@ import os
 import sys
 import subprocess
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import filedialog, messagebox, ttk
 
-RAW_DIR = "data/raw_videos"
+VIDEO_EXTENSIONS = (".mp4", ".mov", ".mkv", ".avi", ".MP4", ".MOV", ".MKV", ".AVI")
+DEFAULT_VIDEO_DIR = "data/raw_videos"
 
-def list_videos():
-    if not os.path.isdir(RAW_DIR):
+
+def list_videos(directory: str):
+    if not os.path.isdir(directory):
         return []
-    exts = (".mp4", ".mov", ".mkv", ".avi", ".MP4", ".MOV", ".MKV", ".AVI")
-    files = [f for f in os.listdir(RAW_DIR) if f.endswith(exts)]
+    files = [f for f in os.listdir(directory) if f.endswith(VIDEO_EXTENSIONS)]
     return sorted(files)
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("rdm-monitor | Selección de fuente")
+        self.title("Monitor | Selección de fuente")
         self.geometry("520x560")  # ventana “normal”
         self.resizable(False, False)
 
@@ -35,6 +36,7 @@ class App(tk.Tk):
         self.skip = tk.StringVar(value="1")
         self.out_video = tk.BooleanVar(value=True)
         self.debug = tk.BooleanVar(value=False)
+        self.video_dir = tk.StringVar(value=DEFAULT_VIDEO_DIR)
 
         self._build_ui()
         self._refresh_videos()
@@ -47,7 +49,7 @@ class App(tk.Tk):
         frm_src.pack(fill="x", **pad)
 
         rb1 = ttk.Radiobutton(frm_src, text="Cámara USB", variable=self.source_mode, value="camera", command=self._toggle_source)
-        rb2 = ttk.Radiobutton(frm_src, text="Video en data/raw_videos", variable=self.source_mode, value="video", command=self._toggle_source)
+        rb2 = ttk.Radiobutton(frm_src, text="Video en directorio", variable=self.source_mode, value="video", command=self._toggle_source)
         rb1.grid(row=0, column=0, sticky="w", padx=6, pady=4)
         rb2.grid(row=0, column=1, sticky="w", padx=6, pady=4)
 
@@ -55,9 +57,16 @@ class App(tk.Tk):
         self.ent_cam = ttk.Entry(frm_src, width=6, textvariable=self.camera_index)
         self.ent_cam.grid(row=1, column=1, sticky="w")
 
+        ttk.Label(frm_src, text="Directorio videos:").grid(row=2, column=0, sticky="e", pady=(4,0))
+        frm_dir = ttk.Frame(frm_src)
+        frm_dir.grid(row=2, column=1, sticky="ew", pady=(4,0))
+        frm_dir.columnconfigure(0, weight=1)
+        ttk.Entry(frm_dir, textvariable=self.video_dir, width=28).grid(row=0, column=0, sticky="ew")
+        ttk.Button(frm_dir, text="Elegir...", command=self._select_directory).grid(row=0, column=1, padx=(6,0))
+
         # Lista de videos
         frm_vid = ttk.Frame(frm_src)
-        frm_vid.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6,0))
+        frm_vid.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(6,0))
         frm_vid.columnconfigure(0, weight=1)
 
         self.lst = tk.Listbox(frm_vid, height=8, exportselection=False)
@@ -130,9 +139,10 @@ class App(tk.Tk):
 
     def _refresh_videos(self):
         self.lst.delete(0, tk.END)
-        vids = list_videos()
+        directory = self.video_dir.get().strip()
+        vids = list_videos(directory)
         if not vids:
-            self.lst.insert(tk.END, "(Sin videos en data/raw_videos)")
+            self.lst.insert(tk.END, f"(Sin videos en {directory or 'directorio'})")
             return
         for v in vids:
             self.lst.insert(tk.END, v)
@@ -146,7 +156,15 @@ class App(tk.Tk):
         basename = self.lst.get(sel[0])
         if basename.startswith("(Sin videos"):
             return None
-        return os.path.join(RAW_DIR, basename)
+        return os.path.join(self.video_dir.get().strip(), basename)
+
+    def _select_directory(self):
+        current = self.video_dir.get().strip() or DEFAULT_VIDEO_DIR
+        initialdir = current if os.path.isdir(current) else DEFAULT_VIDEO_DIR
+        selected = filedialog.askdirectory(initialdir=initialdir, title="Selecciona directorio de videos")
+        if selected:
+            self.video_dir.set(selected)
+            self._refresh_videos()
 
     def _start(self):
         # Construir comando a ejecutar (subproceso)
@@ -181,7 +199,7 @@ class App(tk.Tk):
             out_arg = ["--out", os.path.join("outputs", "annotated", out_name)]
 
         cmd = [
-            sys.executable, "-m", "rdm_monitor",
+            sys.executable, "-m", "src",
             "--engine", engine,
             "--src", src,
             "--idle_stop_sec", idle_stop,
@@ -198,12 +216,9 @@ class App(tk.Tk):
         if debug:
             cmd.append("--debug")
 
-        env = os.environ.copy()
-        env["PYTHONPATH"] = "src" + (os.pathsep + env["PYTHONPATH"] if "PYTHONPATH" in env else "")
-
         try:
             self.destroy()
-            subprocess.run(cmd, check=True, env=env)
+            subprocess.run(cmd, check=True)
         except subprocess.CalledProcessError as e:
             messagebox.showerror("Error", f"Falló la ejecución:\n{e}")
 

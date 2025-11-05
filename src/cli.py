@@ -5,6 +5,7 @@ import os
 import time
 from collections import deque
 from datetime import datetime
+from pathlib import Path
 
 from .utils.draw import put_text, draw_status_banner, draw_small_graph, draw_mini_mask
 from .utils.smoothing import moving_avg
@@ -19,39 +20,78 @@ from .io.recorders import CSVRecorder, make_videowriter
 def iso(ts=None):
     return (datetime.now() if ts is None else datetime.fromtimestamp(ts)).isoformat(timespec="seconds")
 
-def list_videos(raw_dir="data/raw_videos"):
-    exts = (".mp4", ".mov", ".mkv", ".avi", ".MP4", ".MOV", ".MKV", ".AVI")
+VIDEO_EXTENSIONS = (".mp4", ".mov", ".mkv", ".avi", ".MP4", ".MOV", ".MKV", ".AVI")
+DEFAULT_VIDEO_DIR = "data/raw_videos"
+
+
+def list_videos(raw_dir: str) -> list[str]:
+    """Enumerate video files inside *raw_dir* sorted alphabetically."""
+
     if not os.path.isdir(raw_dir):
         return []
-    return sorted([os.path.join(raw_dir, f) for f in os.listdir(raw_dir) if f.endswith(exts)])
 
-def pick_source_interactive():
-    print("\n== rdm-monitor: Selecciona fuente ==")
+    entries = []
+    with os.scandir(raw_dir) as it:
+        for entry in it:
+            if entry.is_file() and entry.name.endswith(VIDEO_EXTENSIONS):
+                entries.append(entry.path)
+    return sorted(entries)
+
+
+def choose_video_from_directory(directory: str) -> str | None:
+    """Prompt the user to pick a video file from ``directory``."""
+
+    videos = list_videos(directory)
+    if not videos:
+        print(f"No se encontraron videos en {directory}.")
+        return None
+
+    print(f"\nVideos disponibles en {directory}:")
+    for index, path in enumerate(videos, 1):
+        print(f"{index}) {os.path.basename(path)}")
+
+    selection = input("Elige número: ").strip()
+    if not selection.isdigit():
+        print("Selección inválida.")
+        return None
+
+    idx = int(selection)
+    if idx < 1 or idx > len(videos):
+        print("Selección fuera de rango.")
+        return None
+    return videos[idx - 1]
+
+
+def prompt_video_directory(default: str = DEFAULT_VIDEO_DIR) -> str | None:
+    """Ask the user for a directory that contains videos to analyse."""
+
+    answer = input(f"Directorio de videos [{default}]: ").strip()
+    chosen = Path(answer) if answer else Path(default)
+    if not chosen.exists() or not chosen.is_dir():
+        print("El directorio indicado no existe.")
+        return None
+    return str(chosen)
+
+
+def pick_source_interactive() -> str | None:
+    print("\n== Monitor: Selecciona fuente ==")
     print("1) Cámara USB (índice 0)")
-    print("2) Video en data/raw_videos/")
+    print("2) Seleccionar video desde un directorio")
     print("3) Especificar ruta manual")
     choice = input("Opción [1/2/3]: ").strip() or "1"
     if choice == "1":
         return "0"
-    elif choice == "2":
-        vids = list_videos()
-        if not vids:
-            print("No se encontraron videos en data/raw_videos/")
+    if choice == "2":
+        directory = prompt_video_directory()
+        if not directory:
             return None
-        print("\nVideos disponibles:")
-        for i, p in enumerate(vids, 1):
-            print(f"{i}) {os.path.basename(p)}")
-        sel = input("Elige número: ").strip()
-        if not sel.isdigit() or int(sel) < 1 or int(sel) > len(vids):
-            print("Selección inválida.")
-            return None
-        return vids[int(sel)-1]
-    elif choice == "3":
+        return choose_video_from_directory(directory)
+    if choice == "3":
         path = input("Ruta al video/cámara (ej. 0 o data/raw_videos/mi.mp4): ").strip()
         return path if path else None
-    else:
-        print("Opción inválida.")
-        return None
+
+    print("Opción inválida.")
+    return None
 
 def make_engine(name, args):
     if name == "diff":
@@ -87,7 +127,11 @@ def main():
     ap = argparse.ArgumentParser(
         description="Monitor de operación con múltiples motores y múltiples intervalos (OPERACION <-> IDLE)."
     )
-    ap.add_argument("--src", default="", help="Ruta de video o índice de cámara (ej. 0). Si se omite, aparece un menú.")
+    ap.add_argument(
+        "--src",
+        default="",
+        help="Ruta de video, índice de cámara o directorio de videos. Si se omite, aparece un menú.",
+    )
     ap.add_argument("--engine", choices=["mog2","diff","knn","flow","avg","edges"], default="mog2",
                     help="Motor de movimiento.")
     # Dimensiones
@@ -138,6 +182,13 @@ def main():
             return
         args.src = src_pick
 
+    if os.path.isdir(args.src):
+        chosen = choose_video_from_directory(args.src)
+        if not chosen:
+            print("No se seleccionó un video dentro del directorio. Saliendo.")
+            return
+        args.src = chosen
+
     # Fuente
     source = int(args.src) if args.src.isdigit() else args.src
     cap = cv2.VideoCapture(source)
@@ -164,9 +215,9 @@ def main():
     engine.initialize(frame0)
 
     # Ventana
-    cv2.namedWindow("rdm_monitor", cv2.WINDOW_NORMAL)
+    cv2.namedWindow("monitor", cv2.WINDOW_NORMAL)
     disp_h = int(proc_h * (args.display_width / proc_w))
-    cv2.resizeWindow("rdm_monitor", args.display_width, disp_h)
+    cv2.resizeWindow("monitor", args.display_width, disp_h)
 
     # Estado con múltiples intervalos
     status = "IDLE"                 # "IDLE" | "OPERACION"
@@ -240,7 +291,7 @@ def main():
         if mask is not None:
             draw_mini_mask(out, mask, (10, out.shape[0]-10))
 
-        cv2.imshow("rdm_monitor", out)
+        cv2.imshow("monitor", out)
         if writer is not None:
             writer.write(out)
 
