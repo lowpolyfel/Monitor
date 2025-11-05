@@ -15,8 +15,9 @@ dependencies = [
 ]
 
 [project.scripts]
-monitor-cli = "monitor.cli:main"
-monitor-gui = "monitor.gui:main"
+monitor-cli = "src.cli:main"
+monitor-gui = "src.gui:main"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["src", "src.io", "src.pipeline", "src.utils"]

@@ -29,7 +29,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-> El paso `pip install -e .` registra el paquete `monitor` usando el layout `src/` y
+> El paso `pip install -e .` registra el paquete `src` usando el layout "src only" y
 > evita depender de variables de entorno como `PYTHONPATH`.
 
 ## Uso rápido
@@ -39,14 +39,22 @@ pip install -e .
 Una vez instalado el paquete, ejecuta el monitor desde cualquier ubicación:
 
 ```bash
-python -m monitor --src data/raw_videos/MI_VIDEO.mp4 --idle_stop_sec 20 \
+python -m src --src data/raw_videos/MI_VIDEO.mp4 --idle_stop_sec 20 \
   --out outputs/annotated/MI_VIDEO_annotated.mp4
 ```
 
 Para ver todas las opciones disponibles:
 
 ```bash
-python -m monitor --help
+python -m src --help
+```
+
+Si ejecutas la herramienta sin `--src`, aparecerá un menú interactivo que permite elegir una cámara o seleccionar un directorio específico para explorar videos.
+
+Si prefieres no instalar el paquete, puedes ejecutar la CLI directamente con:
+
+```bash
+python main.py
 ```
 
 ### Interfaz gráfica
@@ -56,6 +64,8 @@ Ejecuta la GUI (requiere un entorno con servidor gráfico disponible):
 ```bash
 ./scripts/run_gui.sh
 ```
+
+La interfaz permite escoger el directorio de videos antes de iniciar el análisis.
 
 ### Script continuo
 
@@ -71,7 +81,7 @@ Procesa un video completo con parámetros predefinidos:
 configs/        # Configuraciones de ejemplo (YAML)
 legacy/         # Scripts de prueba históricos
 scripts/        # Scripts de conveniencia para CLI/GUI
-src/monitor/    # Código fuente del paquete
+src/            # Código fuente del paquete (estructura plana)
 ```
 
 ## Pruebas heredadas
@@ -82,8 +92,8 @@ histórica y no forman parte del flujo de pruebas actual.
 ## Desarrollo
 
 1. Crea un entorno virtual y sigue los pasos de instalación indicados arriba.
-2. Ejecuta `python -m monitor` para validar la CLI.
-3. Utiliza `python -m monitor.gui` para probar la interfaz gráfica.
+2. Ejecuta `python main.py` o `python -m src` para validar la CLI.
+3. Utiliza `python -m src.gui` para probar la interfaz gráfica.
 
 Se aceptan contribuciones mediante pull requests. Asegúrate de ejecutar herramientas
 estáticas o pruebas relevantes antes de enviar cambios.
