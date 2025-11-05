@@ -26,7 +26,7 @@ def list_videos(raw_dir="data/raw_videos"):
     return sorted([os.path.join(raw_dir, f) for f in os.listdir(raw_dir) if f.endswith(exts)])
 
 def pick_source_interactive():
-    print("\n== rdm-monitor: Selecciona fuente ==")
+    print("\n== Monitor: Selecciona fuente ==")
     print("1) Cámara USB (índice 0)")
     print("2) Video en data/raw_videos/")
     print("3) Especificar ruta manual")
@@ -164,9 +164,9 @@ def main():
     engine.initialize(frame0)
 
     # Ventana
-    cv2.namedWindow("rdm_monitor", cv2.WINDOW_NORMAL)
+    cv2.namedWindow("monitor", cv2.WINDOW_NORMAL)
     disp_h = int(proc_h * (args.display_width / proc_w))
-    cv2.resizeWindow("rdm_monitor", args.display_width, disp_h)
+    cv2.resizeWindow("monitor", args.display_width, disp_h)
 
     # Estado con múltiples intervalos
     status = "IDLE"                 # "IDLE" | "OPERACION"
@@ -240,7 +240,7 @@ def main():
         if mask is not None:
             draw_mini_mask(out, mask, (10, out.shape[0]-10))
 
-        cv2.imshow("rdm_monitor", out)
+        cv2.imshow("monitor", out)
         if writer is not None:
             writer.write(out)
 

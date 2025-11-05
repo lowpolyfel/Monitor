@@ -16,7 +16,7 @@ def list_videos():
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("rdm-monitor | Selección de fuente")
+        self.title("Monitor | Selección de fuente")
         self.geometry("520x560")  # ventana “normal”
         self.resizable(False, False)
 
@@ -181,7 +181,7 @@ class App(tk.Tk):
             out_arg = ["--out", os.path.join("outputs", "annotated", out_name)]
 
         cmd = [
-            sys.executable, "-m", "rdm_monitor",
+            sys.executable, "-m", "monitor",
             "--engine", engine,
             "--src", src,
             "--idle_stop_sec", idle_stop,
@@ -198,12 +198,9 @@ class App(tk.Tk):
         if debug:
             cmd.append("--debug")
 
-        env = os.environ.copy()
-        env["PYTHONPATH"] = "src" + (os.pathsep + env["PYTHONPATH"] if "PYTHONPATH" in env else "")
-
         try:
             self.destroy()
-            subprocess.run(cmd, check=True, env=env)
+            subprocess.run(cmd, check=True)
         except subprocess.CalledProcessError as e:
             messagebox.showerror("Error", f"Falló la ejecución:\n{e}")
 
