@@ -2,7 +2,7 @@
 set -euo pipefail
 VIDEO_PATH="${1:-data/raw_videos/VIDEO.mp4}"
 
-PYTHONPATH=src python3 -m rdm_monitor \
+python3 -m monitor \
   --src "${VIDEO_PATH}" \
   --engine diff \
   --idle_stop_sec 20 \
