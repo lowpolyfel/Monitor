@@ -37,6 +37,7 @@ class App(tk.Tk):
         self.out_video = tk.BooleanVar(value=True)
         self.debug = tk.BooleanVar(value=False)
         self.video_dir = tk.StringVar(value=DEFAULT_VIDEO_DIR)
+        self.selected_video = tk.StringVar(value="")
 
         self._build_ui()
         self._refresh_videos()
@@ -74,9 +75,18 @@ class App(tk.Tk):
         sb = ttk.Scrollbar(frm_vid, orient="vertical", command=self.lst.yview)
         sb.grid(row=0, column=1, sticky="ns")
         self.lst.configure(yscrollcommand=sb.set)
+        self.lst.bind("<<ListboxSelect>>", self._on_list_select)
 
         btn_refresh = ttk.Button(frm_vid, text="Refrescar lista", command=self._refresh_videos)
         btn_refresh.grid(row=1, column=0, sticky="w", pady=6)
+
+        frm_selected = ttk.Frame(frm_vid)
+        frm_selected.grid(row=2, column=0, columnspan=2, sticky="ew")
+        frm_selected.columnconfigure(0, weight=1)
+        self.ent_selected = ttk.Entry(frm_selected, textvariable=self.selected_video, state="readonly")
+        self.ent_selected.grid(row=0, column=0, sticky="ew")
+        self.btn_select_file = ttk.Button(frm_selected, text="Seleccionar archivo...", command=self._select_video_file)
+        self.btn_select_file.grid(row=0, column=1, padx=(6, 0))
 
         # Parámetros
         frm_params = ttk.LabelFrame(self, text="Parámetros")
@@ -136,6 +146,11 @@ class App(tk.Tk):
         state_vid = "normal" if mode=="video" else "disabled"
         self.ent_cam.configure(state=state_cam)
         self.lst.configure(state=state_vid)
+        self.btn_select_file.configure(state=state_vid)
+        self.ent_selected.configure(state="readonly" if mode=="video" else "disabled")
+        if mode == "camera":
+            self.lst.selection_clear(0, tk.END)
+            self.selected_video.set("")
 
     def _refresh_videos(self):
         self.lst.delete(0, tk.END)
@@ -146,8 +161,13 @@ class App(tk.Tk):
             return
         for v in vids:
             self.lst.insert(tk.END, v)
+        self.selected_video.set("")
 
     def _selected_video_path(self):
+        custom_path = self.selected_video.get().strip()
+        if custom_path:
+            return custom_path
+
         if not self.lst.size():
             return None
         sel = self.lst.curselection()
@@ -165,6 +185,38 @@ class App(tk.Tk):
         if selected:
             self.video_dir.set(selected)
             self._refresh_videos()
+            self.selected_video.set("")
+
+    def _select_video_file(self):
+        initialdir = self.video_dir.get().strip() or DEFAULT_VIDEO_DIR
+        if not os.path.isdir(initialdir):
+            initialdir = DEFAULT_VIDEO_DIR
+        selected = filedialog.askopenfilename(
+            initialdir=initialdir,
+            title="Selecciona un video",
+            filetypes=[("Videos", "*.mp4 *.mov *.mkv *.avi *.MP4 *.MOV *.MKV *.AVI"), ("Todos los archivos", "*.*")],
+        )
+        if selected:
+            directory = os.path.dirname(selected)
+            if directory and os.path.isdir(directory):
+                self.video_dir.set(directory)
+                self._refresh_videos()
+            self.selected_video.set(selected)
+            self.lst.selection_clear(0, tk.END)
+            basename = os.path.basename(selected)
+            matches = [i for i in range(self.lst.size()) if self.lst.get(i) == basename]
+            if matches:
+                self.lst.selection_set(matches[0])
+                self.lst.see(matches[0])
+
+    def _on_list_select(self, event):
+        sel = self.lst.curselection()
+        if not sel:
+            return
+        basename = self.lst.get(sel[0])
+        if basename.startswith("(Sin videos"):
+            return
+        self.selected_video.set(os.path.join(self.video_dir.get().strip(), basename))
 
     def _start(self):
         # Construir comando a ejecutar (subproceso)
@@ -173,7 +225,7 @@ class App(tk.Tk):
         else:
             path = self._selected_video_path()
             if not path:
-                messagebox.showerror("Error", "Selecciona un video de la lista.")
+                messagebox.showerror("Error", "Selecciona un video desde la lista o el explorador.")
                 return
             src = path
 
